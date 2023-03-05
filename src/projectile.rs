@@ -33,7 +33,7 @@ pub fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub fn brust_system(mut commands: Commands, hit_into_water: Res<HitIntoWaterPicture>, mut event_reader: EventReader<BrustEvent>) {
     for event in event_reader.iter() {
         commands.spawn(SpriteBundle {
-            transform: Transform::from_xyz(event.x, event.y, 0.0),
+            transform: Transform::from_xyz(event.x, event.y, 0.0).with_scale(Vec3::new(0.1, 0.1, 1.0)),
             texture: hit_into_water.0.clone(),
             ..Default::default()
         });
