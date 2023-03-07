@@ -56,12 +56,46 @@ pub struct BattleshipMovement {
 // (tan(b) - tan(a)) * x = tan(a) * tan(b) * (y1 - y0) + tan(b) * x0 - tan(a) * x1
 // x = (tan(a) * tan(b) * (y1 - y0) + tan(b) * x0 - tan(a) * x1) / (tan(b) - tan(a))
 
+// dy / dx = -tan(a)
+
+// y = y0 + cos(a) * length * 0.5 + dy
+// x = x0 + sin(a) * length * 0.5 + dx
+
+// y = y0 + cos(a) * length * 0.5 - tan(a) * dx
+// dx = x - x0 - sin(a) * length * 0.5
+
+// y = y0 + cos(a) * length * 0.5 - tan(a) * (x - x0 - sin(a) * length * 0.5)
+
+// y0 + cos(a) * length * 0.5 - tan(a) * (x - x0 - sin(a) * length * 0.5) = y1 + (x - x1) / tan(b)
+
+// y0 + cos(a) * length * 0.5 - tan(a) * x + tan(a) * x0 + tan(a) * sin(a) * length * 0.5 = y1 + (x - x1) / tan(b)
+
+// tan(b) * y0 + tan(b) * cos(a) * length * 0.5 - tan(b) * tan(a) * x + tan(b) * tan(a) * x0 + tan(b) * tan(a) * sin(a) * length * 0.5 = tan(b) * y + x - x1
+
+// y = a + bx
+
+// y = y0 + tan(b)(x - x0)
+
+fn detect_frontend_collision(bullet: BulletMovement, battleship: BattleshipMovement) -> Option<(f32, f32, f32)> {
+    let ship_radian = battleship.direction * PI / 180.0;
+    let ship_x = battleship.x + ship_radian.sin() * battleship.length * 0.5;
+    let ship_y = battleship.y + ship_radian.cos() * battleship.length * 0.5;
+    let tan_bullet = (bullet.direction * PI / 180.0).tan();
+    let tan_ship = (battleship.direction * PI / 180.0).tan();
+    let collision_x = (tan_bullet * tan_ship * (ship_y - bullet.y) + tan_ship * bullet.x - tan_bullet * ship_x) / (tan_ship - tan_bullet);
+    let collision_y = bullet.y + (collision_x - bullet.x) / tan_bullet;
+    let distance = ((bullet.x - collision_x).powf(2.0) + (bullet.y - collision_y).powf(2.0)).sqrt();
+    None
+}
+
+// yb = y0 - cos(a) * length * 0.5
+// xb = x0 - sin(a) * length * 0.5
+
 fn detect_collision(bullet: BulletMovement, battleship: BattleshipMovement) -> bool {
     let tan_bullet = (bullet.direction * PI / 180.0).tan();
     let tan_ship = (battleship.direction * PI / 180.0).tan();
     let collision_x = (tan_bullet * tan_ship * (battleship.y - bullet.y) + tan_ship * bullet.x - tan_bullet * battleship.x) / (tan_ship - tan_bullet);
     let collision_y = bullet.y + (collision_x - bullet.x) / tan_bullet;
-    println!("collision x: {}, collision y: {}", collision_x, collision_y);
     let ship_x1 = battleship.x - (battleship.direction * PI / 180.0).sin() * battleship.length * 0.5;
     let ship_x2 = battleship.x + (battleship.direction * PI / 180.0).sin() * battleship.length * 0.5;
     let ship_y1 = battleship.y - (battleship.direction * PI / 180.0).cos() * battleship.length * 0.5;
