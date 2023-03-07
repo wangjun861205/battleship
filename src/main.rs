@@ -2,9 +2,9 @@ mod battleship;
 mod projectile;
 
 use battleship::Battleship;
-use bevy::{math::f64, prelude::*};
+use bevy::prelude::*;
 use projectile::{brust_system, projectile_system, BrustEvent, XVelocity, YVelocity, ZVelocity};
-use std::f32::consts::PI;
+use std::f32::{consts::PI, INFINITY, NEG_INFINITY};
 
 fn setup_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
@@ -37,6 +37,58 @@ pub struct BattleshipMovement {
     length: f32,
     width: f32,
     height: f32,
+}
+
+// (x - x0) / (y - y0) = a
+// (x - x1) / (y - y1) = b
+
+// (x - x0) / a = y - y0
+// (x - x1) / a = y - y1
+
+// y = (x - x0) / a + y0
+// y = (x - x1) / b + y1
+
+// (x - x0) / a + y0 = (x - x1) / b + y1
+
+// b * (x - x0) + a * b * y0 = a * (x - x1) + a * b * y1
+
+// bx - bx0 + aby0 = ax - ax1 + aby1
+
+// (b - a)x = bx0 - ax1 + aby1 - aby0
+
+// x = (bx0 - ax1 + aby1 - aby0) / (b-a)
+
+struct HorizontalPosition {
+    x: f32,
+    y: f32,
+    direction: f32,
+}
+
+fn detect_collision_horizontal(a: HorizontalPosition, b: HorizontalPosition) -> Option<(f32, f32)> {
+    if (a.direction - b.direction) % 180.0 == 0.0 {
+        return None;
+    }
+    let tan_a = (a.direction * PI / 180.0).tan();
+    let tan_b = (b.direction * PI / 180.0).tan();
+    if tan_a == 0.0 {
+        if tan_b == INFINITY || tan_b == NEG_INFINITY {
+            return Some((a.x, b.y));
+        } else {
+            let y = (a.x - b.x) / tan_b + b.y;
+            return Some((a.x, y));
+        }
+    }
+    if tan_b == 0.0 {
+        if tan_a == INFINITY || tan_b == NEG_INFINITY {
+            return Some((b.x, a.y));
+        } else {
+            let y = (b.x - a.x) / tan_a + a.y;
+            return Some((b.x, y));
+        }
+    }
+    let x = (tan_b * a.x - tan_a * b.x + tan_a * tan_b * b.y - tan_a * tan_b * a.y) / (tan_a * tan_b);
+    let y = (x - a.x) / tan_a + a.y;
+    Some((x, y))
 }
 
 // dx / dy = tan(a)
@@ -140,5 +192,14 @@ mod test {
         println!("tan 45 degree {}", (45.0 * PI / 180.0).tan());
         println!("tan 315 degree {}", (315.0 * PI / 180.0).tan());
         assert!(detect_collision(bullet, battleship) == true)
+    }
+
+    #[test]
+    fn test_detect_collision_horizontal() {
+        let p1 = HorizontalPosition { x: 1.0, y: 1.0, direction: 90.0 };
+        let p2 = HorizontalPosition { x: -1.0, y: -1.0, direction: 0.0 };
+        let pc = detect_collision_horizontal(p1, p2);
+        println!("collided at {:?}", pc);
+        assert!(pc == Some((-1.0, 1.0)));
     }
 }
