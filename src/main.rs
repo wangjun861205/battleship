@@ -64,27 +64,49 @@ struct HorizontalPosition {
     direction: f32,
 }
 
-fn detect_collision_horizontal(a: HorizontalPosition, b: HorizontalPosition) -> Option<(f32, f32)> {
-    if (a.direction - b.direction) % 180.0 == 0.0 {
+fn mod_direction(mut direction: f32) -> f32 {
+    direction %= 360.0;
+    if direction < 0.0 {
+        direction += 360.0;
+    }
+    direction
+}
+
+fn detect_horizontal_collision(a: HorizontalPosition, b: HorizontalPosition) -> Option<(f32, f32)> {
+    let a_dir = mod_direction(a.direction);
+    let b_dir = mod_direction(b.direction);
+    if (a_dir - b_dir) % 180.0 == 0.0 {
         return None;
     }
     let tan_a = (a.direction * PI / 180.0).tan();
     let tan_b = (b.direction * PI / 180.0).tan();
-    if tan_a == 0.0 {
-        if tan_b == INFINITY || tan_b == NEG_INFINITY {
+    if a_dir == 0.0 || a_dir == 180.0 {
+        if b_dir == 90.0 || b_dir == 270.0 {
             return Some((a.x, b.y));
-        } else {
-            let y = (a.x - b.x) / tan_b + b.y;
-            return Some((a.x, y));
         }
+        let y = (a.x - b.x) / tan_b + b.y;
+        return Some((a.x, y));
     }
-    if tan_b == 0.0 {
-        if tan_a == INFINITY || tan_b == NEG_INFINITY {
+    if b_dir == 0.0 || b_dir == 180.0 {
+        if a_dir == 90.0 || a_dir == 270.0 {
             return Some((b.x, a.y));
-        } else {
-            let y = (b.x - a.x) / tan_a + a.y;
-            return Some((b.x, y));
         }
+        let y = (b.x - a.x) / tan_a + a.y;
+        return Some((b.x, y));
+    }
+    if a_dir == 90.0 || a_dir == 270.0 {
+        if b_dir == 0.0 || b_dir == 180.0 {
+            return Some((b.x, a.y));
+        }
+        let x = tan_b * (a.y - b.y) + b.x;
+        return Some((x, a.y));
+    }
+    if b_dir == 90.0 || b_dir == 270.0 {
+        if a_dir == 0.0 || a_dir == 0.0 {
+            return Some((a.x, b.y));
+        }
+        let x = tan_a * (b.y - a.y) + a.x;
+        return Some((x, b.y));
     }
     let x = (tan_b * a.x - tan_a * b.x + tan_a * tan_b * b.y - tan_a * tan_b * a.y) / (tan_a * tan_b);
     let y = (x - a.x) / tan_a + a.y;
@@ -198,8 +220,7 @@ mod test {
     fn test_detect_collision_horizontal() {
         let p1 = HorizontalPosition { x: 1.0, y: 1.0, direction: 90.0 };
         let p2 = HorizontalPosition { x: -1.0, y: -1.0, direction: 0.0 };
-        let pc = detect_collision_horizontal(p1, p2);
-        println!("collided at {:?}", pc);
+        let pc = detect_horizontal_collision(p1, p2);
         assert!(pc == Some((-1.0, 1.0)));
     }
 }
